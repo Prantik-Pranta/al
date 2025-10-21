@@ -1,0 +1,244 @@
+{% load static %} {% load humanize %} {% load custom_filters %}
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <meta content="{{ csrf_token }}" name="csrf-token"/>
+  <title>
+   AlumniFy
+  </title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+  <link href="{% static 'css/feed.css' %}" rel="stylesheet"/>
+  <link href="{% static 'css/post-section.css' %}" rel="stylesheet"/>
+  <link href="{% static 'css/comments-section.css' %}" rel="stylesheet"/>
+  <link href="{% static 'css/header.css' %}" rel="stylesheet"/>
+  <link href="{% static 'css/edit-post.css' %}" rel="stylesheet"/>
+ </head>
+ <body>
+  <!-- Header -->
+  <header class="header">
+   <div class="header-content">
+    <a class="logo" href="{% url 'home' %}">
+     AlumniFy
+    </a>
+    <div class="search-box">
+     <form action="{% url 'search_results' %}" method="POST">
+      {% csrf_token %}
+      <span class="search-icon">
+       <button class="auto-background-none-border-no" type="submit">
+        <i class="fa-solid fa-search">
+        </i>
+       </button>
+      </span>
+      <input class="search-input" name="search_input" placeholder="Search" type="text"/>
+     </form>
+    </div>
+    <nav class="nav-menu">
+     <a class="nav-item" href="{% url 'home' %}">
+      <span class="nav-icon">
+       <i class="fa-solid fa-home">
+       </i>
+      </span>
+      <span>
+       Home
+      </span>
+     </a>
+     <a class="nav-item" href="{% url 'my_connections' %}">
+      <span class="nav-icon">
+       <i class="fa-solid fa-users">
+       </i>
+      </span>
+      <span>
+       My Network
+      </span>
+     </a>
+     <a class="nav-item" href="{% url 'user_activity' %}">
+      <span class="nav-icon">
+       <i class="fa-solid fa-list-check">
+       </i>
+      </span>
+      <span>
+       My Activity
+      </span>
+     </a>
+     <a class="nav-item" href="{% url 'inbox' %}">
+      <span class="nav-icon">
+       <i class="fa-solid fa-comment-dots">
+       </i>
+      </span>
+      <span>
+       Messaging
+      </span>
+     </a>
+     <a class="nav-item active" href="{% url 'notifications' %}">
+      <span class="nav-icon">
+       <i class="fa-solid fa-bell">
+       </i>
+      </span>
+      <span>
+       Notifications
+      </span>
+     </a>
+     <div class="nav-item profile-dropdown">
+      <a class="nav-item-profile" href="#" onclick="toggleProfileMenu(event)">
+       <span class="nav-icon auto-margin-top-2px-margin-bot">
+        <img alt="Profile Picture" class="auto-width-24px-height-24px-bo" onerror="this.onerror=null;this.src='{% static 'images/default-profile.png' %}';" src="{% if user_profile.profile_photo %}{{ user_profile.profile_photo.url }}{% else %}{% static 'images/default-profile.png' %}{% endif %}"/>
+       </span>
+       <span>
+        Me ▼
+       </span>
+      </a>
+      <!-- Dropdown -->
+      <div class="dropdown-menu" id="profileMenu" onclick="event.stopPropagation()">
+       <div class="profile-preview">
+        <img alt="Profile Picture" class="auto-width-60px-height-60px-bo" onerror="this.onerror=null;this.src='{% static 'images/default-profile.png' %}';" src="{% if user_profile.profile_photo %}{{ user_profile.profile_photo.url }}{% else %}{% static 'images/default-profile.png' %}{% endif %}"/>
+        <h4>
+         {{user_profile.full_name}}
+        </h4>
+        {% if user_profile.headline %}
+        <p>
+         {{user_profile.headline}}
+        </p>
+        {% endif %}
+       </div>
+       <a class="view-profile-btn" href="{% url 'profile' %}">
+        View Profile
+       </a>
+       <form action="{% url 'logout' %}" class="auto-margin-0-padding-0" method="POST">
+        {% csrf_token %}
+        <button class="signout-btn auto-width-100-background-none" type="submit">
+         Sign Out
+        </button>
+       </form>
+      </div>
+     </div>
+    </nav>
+    <div class="mobile-profile-pic" onclick="toggleProfileSidebar()">
+     👤
+    </div>
+   </div>
+  </header>
+  <!-- Overlay for mobile -->
+  <div class="overlay" id="overlay" onclick="toggleProfileSidebar()">
+  </div>
+  <!-- Main Container -->
+  <div class="main-container">
+   <!-- Left Sidebar - Profile Preview -->
+   <aside class="profile-sidebar" id="profileSidebar">
+    <div class="profile-cover">
+     <img alt="Profile Cover Photo" class="cover-image" src="{% static 'images/default-cover.png' %}"/>
+    </div>
+    <div class="profile-details">
+     <div class="profile-pic-container">
+      <img alt="Profile Picture" class="profile-pic" onerror="this.onerror=null;this.src='{% static 'images/default-profile.png' %}';" src="{% if user_profile.profile_photo %}{{ user_profile.profile_photo.url }}{% else %}{% static 'images/default-profile.png' %}{% endif %}"/>
+     </div>
+     <div class="profile-info">
+      <h3 class="profile-name">
+       {{user_profile.full_name}}
+      </h3>
+      {% if user_profile.headline %}
+      <p class="profile-headline">
+       {{user_profile.headline}}
+      </p>
+      {% endif %}
+     </div>
+     <div class="profile-stats">
+      <div class="stat-item">
+       <span class="stat-label">
+        Connections
+       </span>
+       <span class="stat-value">
+        {{connection_count}}
+       </span>
+      </div>
+     </div>
+    </div>
+   </aside>
+   <!-- Notifications content -->
+   <div>
+    <h2>
+     Notifications
+    </h2>
+    {% if notifications %}
+    <ul>
+     {% for n in notifications %}
+     <li class="{% if not n.is_read %}unread{% endif %}">
+      {{ n.message }}
+      <br/>
+      <small>
+       {{ n.created_at }}
+      </small>
+     </li>
+     {% endfor %}
+    </ul>
+    <a href="{% url 'mark_all_read' %}">
+     Mark all as read
+    </a>
+    {% else %}
+    <p>
+     No notifications yet.
+    </p>
+    {% endif %}
+   </div>
+  </div>
+  <!-- ✅ close .main-container properly -->
+  <script>
+   // Mobile sidebar toggle
+      function toggleProfileSidebar() {
+        const sidebar = document.getElementById("profileSidebar");
+        const overlay = document.getElementById("overlay");
+        sidebar.classList.toggle("active");
+        overlay.classList.toggle("active");
+        document.body.style.overflow = sidebar.classList.contains("active")
+          ? "hidden"
+          : "auto";
+      }
+
+      // Close sidebar when clicking outside (mobile)
+      document.addEventListener("click", function (event) {
+        const sidebar = document.getElementById("profileSidebar");
+        const overlay = document.getElementById("overlay");
+        const profilePic = document.querySelector(".mobile-profile-pic");
+        if (window.innerWidth <= 768 && sidebar.classList.contains("active")) {
+          if (
+            !sidebar.contains(event.target) &&
+            !profilePic.contains(event.target)
+          ) {
+            toggleProfileSidebar();
+          }
+        }
+      });
+
+      // Resize handler
+      window.addEventListener("resize", function () {
+        const sidebar = document.getElementById("profileSidebar");
+        const overlay = document.getElementById("overlay");
+        if (window.innerWidth > 768) {
+          sidebar.classList.remove("active");
+          overlay.classList.remove("active");
+          document.body.style.overflow = "auto";
+        }
+      });
+
+      // Profile dropdown
+      function toggleProfileMenu(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        const menu = document.getElementById("profileMenu");
+        menu.style.display = menu.style.display === "block" ? "none" : "block";
+      }
+
+      // Close dropdown if clicked outside
+      document.addEventListener("click", function (event) {
+        const menu = document.getElementById("profileMenu");
+        const wrapper = document.querySelector(".profile-dropdown");
+        if (menu && wrapper && !wrapper.contains(event.target)) {
+          menu.style.display = "none";
+        }
+      });
+  </script>
+ </body>
+</html>
