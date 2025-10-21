@@ -11,6 +11,5 @@ class NotificationAdmin(admin.ModelAdmin):
     readonly_fields = ("created_at",)
 
     def message_short(self, obj):
-        # shorter preview in the changelist
         return (obj.message[:60] + "…") if obj.message and len(obj.message) > 60 else obj.message
     message_short.short_description = "Message"

@@ -29,7 +29,7 @@
 
   <div class="card">
     {% if notifications %}
-      {% for n in notifications %}
+      {% for n in items %}
         <div class="d-flex align-items-start p-3 border-top {% if forloop.first %}border-0{% endif %} {% if not n.is_read %}bg-light{% endif %}">
           <div class="me-3">
             {% if n.notif_type == 'message' %}

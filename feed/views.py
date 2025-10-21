@@ -2,14 +2,10 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
-
 from User.models import UserProfile, Experience, Education, ConnectionRequest, Connection
 from .models import Post, Like, Comment
 from notifications.utils import notify
 from django.urls import reverse
-# --- Connections ---
-
-
 
 @login_required
 def toggle_like_post(request):
@@ -22,25 +18,24 @@ def toggle_like_post(request):
     user_profile = get_object_or_404(UserProfile, user=request.user)
 
     like, created = Like.objects.get_or_create(user=user_profile, post=post)
-    if not created:
-        # Unlike
+    if not created:        
         like.delete()
         messages.info(request, "You unliked a post.")
     else:
-        # Like
         messages.success(request, "You liked a post.")
 
         # 🔔 Notify the post owner (but not if they liked their own post)
         if post.user.user != request.user:
             from django.urls import reverse
-            from notifications.utils import notify  # uses the helper from the notifications app
+            from notifications.utils import notify
 
             notify(
-                recipient=post.user.user,
-                notif_type='like',
-                message=f"{user_profile.full_name} liked your post",
-                url=reverse('home')  # or a post detail URL if you have one
-            )
+               recipient=post.user.user,
+               notif_type='like',
+               message=f"{user_profile.full_name} liked your post",
+               url=reverse('home')
+)
+
 
     return redirect("home")
 
