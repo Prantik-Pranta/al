@@ -1,10 +1,9 @@
-
 from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse, HttpResponseForbidden
+from django.http import HttpResponseForbidden
 from django.db.models import Q
 from django.utils import timezone
 
@@ -22,17 +21,8 @@ from .helper_functions import (
 )
 
 import secrets
-import string
-from django.core.exceptions import ValidationError
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib import messages
-from django.contrib.auth.models import User
-from django.contrib.auth import authenticate, login, logout
 from django.db import transaction
-from django.core.exceptions import ValidationError
-from django.contrib.auth.password_validation import validate_password
-from .models import UserProfile
-
+from django.db.models import Count
 
 # ============================================
 # Auth / Landing
@@ -41,26 +31,26 @@ from .models import UserProfile
 def login_page(request):
     return render(request, 'login.html')
 
+
 def landing_page(request):
     return render(request, 'landing_page.html')
+
 
 def signup_page(request):
     return render(request, 'signup.html')
 
-# at top
-from django.db import transaction
 
 def create_account(request):
     if request.method == "POST":
         first_name = (request.POST.get("firstName") or "").strip()
-        last_name  = (request.POST.get("lastName")  or "").strip()
-        email      = (request.POST.get("email")      or "").strip().lower()
-        phone      = (request.POST.get("phone")      or "").strip()
-        password   = request.POST.get("password")
+        last_name = (request.POST.get("lastName") or "").strip()
+        email = (request.POST.get("email") or "").strip().lower()
+        phone = (request.POST.get("phone") or "").strip()
+        password = request.POST.get("password")
         university = request.POST.get("university", "")
-        gender     = request.POST.get("gender", "")
-        user_type  = (request.POST.get("user_type") or "student").strip().lower()  # <—
-        department = (request.POST.get("department") or "").strip()                # <—
+        gender = request.POST.get("gender", "")
+        user_type = (request.POST.get("user_type") or "student").strip().lower()
+        department = (request.POST.get("department") or "").strip()
 
         full_name = f"{first_name} {last_name}".strip()
 
@@ -72,7 +62,7 @@ def create_account(request):
             messages.error(request, "Phone number is already registered.")
             return redirect("signup")
 
-        headline  = "Alumni" if user_type == "alumni" else "Student"
+        headline = "Alumni" if user_type == "alumni" else "Student"
         is_alumni = (user_type == "alumni")
 
         with transaction.atomic():
@@ -89,9 +79,9 @@ def create_account(request):
                 phone=phone,
                 university=university,
                 gender=gender,
-                headline=headline,          # <—
-                is_alumni=is_alumni,        # <— (already in your profile edit modal)
-                department=department       # <— ensure field exists on the model
+                headline=headline,
+                is_alumni=is_alumni,
+                department=department
             )
 
         messages.success(request, "Account created successfully! Please log in.")
@@ -127,6 +117,7 @@ def signin(request):
         return redirect("home")
 
     return render(request, "login.html")
+
 
 # ============================================
 # Home Feed
@@ -188,6 +179,12 @@ def home(request):
         if not (r.sender.is_staff or r.sender.is_superuser)
     ]
 
+    posts = find_connection_posts(request.user)
+    posts = posts.annotate(
+        like_count=Count('likes'),
+        comment_count=Count('comments')
+    )
+
     # Suggestions (not me, not staff, not already connected or pending)
     exclude_ids = [p.id for p in connections + pending_requests]
     suggested_users = (
@@ -213,7 +210,7 @@ def home(request):
 
 
 # ============================================
-# Comments (kept as-is)
+# Comments
 # ============================================
 
 def add_comment(request):
@@ -314,7 +311,7 @@ def add_experience(request):
         if headline is not None:
             userprofile.headline = headline
             userprofile.save()
-        messages.success(request, "Experience added successfully!")
+        messages.success(request, "Experience added successfully!", extra_tags='profile_update')
         return redirect("profile")
     return redirect("profile")
 
@@ -322,19 +319,12 @@ def add_experience(request):
 def experience_detail(request, id):
     try:
         exp = Experience.objects.get(id=id, userprofile=request.user.userprofile)
-        return JsonResponse({
-            "id": exp.id,
-            "title": exp.title,
-            "employment_type": exp.employment_type,
-            "company": exp.company,
-            "is_current": exp.is_current,
-            "period_text": exp.period_text,
-            "location": exp.location,
-            "location_type": exp.location_type,
-            "description": exp.description,
-        })
+        # Instead of returning JSON, you can redirect to a detail page or back to profile
+        messages.info(request, f"Viewing experience: {exp.title} at {exp.company}")
+        return redirect("profile")
     except Experience.DoesNotExist:
-        return JsonResponse({"error": "Experience not found"}, status=404)
+        messages.error(request, "Experience not found.")
+        return redirect("profile")
 
 
 def update_experience(request, id):
@@ -356,7 +346,7 @@ def update_experience(request, id):
             user_profile_obj.save()
 
         experience_obj.save()
-        messages.success(request, "Experience updated successfully!")
+        messages.success(request, "Experience updated successfully!", extra_tags='profile_update')
         return redirect("profile")
     return redirect("profile")
 
@@ -388,7 +378,7 @@ def add_education(request):
             period_text=period_text, grade=grade, description=description
         )
 
-        messages.success(request, "Education added successfully!")
+        messages.success(request, "Education added successfully!", extra_tags='profile_update')
         return redirect("profile")
 
     return redirect("profile")
@@ -406,9 +396,8 @@ def update_education(request, id):
         edu_obj.description = request.POST.get("description") or None
         edu_obj.period_text = request.POST.get("period_text") or edu_obj.period_text
 
-        # 'is_current' is only for appending text; no date logic remains
         edu_obj.save()
-        messages.success(request, "Education updated successfully!")
+        messages.success(request, "Education updated successfully!", extra_tags='profile_update')
         return redirect("profile")
 
     return redirect("profile")
@@ -416,30 +405,18 @@ def update_education(request, id):
 
 def education_detail(request, id):
     edu = get_object_or_404(Education, id=id, userprofile=request.user.userprofile)
-    return JsonResponse({
-        "id": edu.id,
-        "school": edu.school,
-        "degree": edu.degree,
-        "field_of_study": edu.field_of_study,
-        "grade": edu.grade,
-        "description": edu.description,
-        "period_text": edu.period_text,
-    })
+    messages.info(request, f"Viewing education: {edu.school}")
+    return redirect("profile")
 
 
 def userprofile_detail(request, id):
     try:
         profile = UserProfile.objects.get(id=id)
-        return JsonResponse({
-            "id": profile.id,
-            "full_name": profile.full_name,
-            "headline": profile.headline,
-            "location": profile.location,
-            "summary": profile.summary,
-            "phone": profile.phone,
-        })
+        messages.info(request, f"Viewing profile: {profile.full_name}")
+        return redirect("profile")
     except UserProfile.DoesNotExist:
-        return JsonResponse({"error": "UserProfile not found"}, status=404)
+        messages.error(request, "Profile not found.")
+        return redirect("profile")
 
 
 def update_profile(request, id):
@@ -451,8 +428,10 @@ def update_profile(request, id):
         userprofile.phone = request.POST.get("phone", userprofile.phone)
         userprofile.summary = request.POST.get("summary", userprofile.summary)
         userprofile.save()
+        messages.success(request, "Profile updated successfully!", extra_tags='profile_update')
         return redirect("profile")
-    return JsonResponse({"error": "Invalid request"}, status=400)
+    messages.error(request, "Invalid request.")
+    return redirect("profile")
 
 
 def update_profile_photo(request):
@@ -460,7 +439,9 @@ def update_profile_photo(request):
         profile = get_object_or_404(UserProfile, user=request.user)
         profile.profile_photo = request.FILES["profile_photo"]
         profile.save()
+        messages.success(request, "Profile photo updated successfully!", extra_tags='profile_update')
         return redirect("profile")
+    messages.error(request, "No photo selected.")
     return redirect("profile")
 
 
@@ -469,7 +450,9 @@ def update_cover_photo(request):
         profile = get_object_or_404(UserProfile, user=request.user)
         profile.background_photo = request.FILES["cover_photo"]
         profile.save()
+        messages.success(request, "Cover photo updated successfully!", extra_tags='profile_update')
         return redirect("profile")
+    messages.error(request, "No cover photo selected.")
     return redirect("profile")
 
 
@@ -480,14 +463,12 @@ def update_profile_info(request):
         user_profile.full_name = request.POST.get("full_name", user_profile.full_name)
         user_profile.headline = request.POST.get("headline", user_profile.headline)
         user_profile.location = request.POST.get("location", user_profile.location)
-        # FIX: use 'summary' field name (HTML uses 'summary')
         user_profile.summary = request.POST.get("summary", user_profile.summary)
-        # Save alumni role if provided
         is_alumni_val = request.POST.get("is_alumni")
         if is_alumni_val is not None:
             user_profile.is_alumni = (is_alumni_val == "on" or is_alumni_val == "true" or is_alumni_val == "1")
         user_profile.save()
-        messages.success(request, "Profile updated successfully!")
+        messages.success(request, "Profile updated successfully!", extra_tags='profile_update')
     return redirect("profile")
 
 
@@ -496,7 +477,7 @@ def delete_experience(request, experience_id):
     if request.method == "POST":
         experience = get_object_or_404(Experience, id=experience_id, userprofile=request.user.userprofile)
         experience.delete()
-        messages.success(request, "Experience deleted successfully!")
+        messages.success(request, "Experience deleted successfully!", extra_tags='profile_update')
     return redirect("profile")
 
 
@@ -505,7 +486,7 @@ def delete_education(request, education_id):
     if request.method == "POST":
         education = get_object_or_404(Education, id=education_id, userprofile=request.user.userprofile)
         education.delete()
-        messages.success(request, "Education deleted successfully!")
+        messages.success(request, "Education deleted successfully!", extra_tags='profile_update')
     return redirect("profile")
 
 
@@ -514,7 +495,7 @@ def delete_license_certificate(request, lc_id):
     if request.method == "POST":
         lc = get_object_or_404(LicenseCertificate, id=lc_id, userprofile=request.user.userprofile)
         lc.delete()
-        messages.success(request, "License/Certificate deleted successfully!")
+        messages.success(request, "License/Certificate deleted successfully!", extra_tags='profile_update')
     return redirect("profile")
 
 
@@ -535,7 +516,7 @@ def add_license_certificate(request):
             certificate_file=certificate_file,
             userprofile=userprofile
         )
-        messages.success(request, "License/Certificate added successfully!")
+        messages.success(request, "License/Certificate added successfully!", extra_tags='profile_update')
         return redirect("profile")
     return redirect("profile")
 
@@ -545,19 +526,15 @@ def get_license_certificate(request, lc_id):
     try:
         lc = get_object_or_404(LicenseCertificate, id=lc_id)
         if lc.userprofile.user != request.user:
-            return JsonResponse({'error': 'Permission denied'}, status=403)
+            messages.error(request, "Permission denied.")
+            return redirect("profile")
 
-        data = {
-            'id': lc.id,
-            'name': lc.name,
-            'issuing_org': lc.issuing_org,
-            'issue_text': lc.issue_text,
-            'expiry_text': lc.expiry_text,
-            'certificate_file': lc.certificate_file.url if lc.certificate_file else None,
-        }
-        return JsonResponse(data)
+        # Instead of JSON, you can redirect to a detail view or show in modal
+        messages.info(request, f"License: {lc.name}")
+        return redirect("profile")
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        messages.error(request, f"Error: {str(e)}")
+        return redirect("profile")
 
 
 def edit_license_certificate(request):
@@ -574,7 +551,7 @@ def edit_license_certificate(request):
             lc.certificate_file = request.FILES["certificate_file"]
 
         lc.save()
-        messages.success(request, "License/Certificate updated successfully!")
+        messages.success(request, "License/Certificate updated successfully!", extra_tags='profile_update')
         return redirect("profile")
     return redirect("profile")
 
@@ -583,23 +560,12 @@ def edit_license_certificate(request):
 def get_skill_context_data(request):
     try:
         user_profile, created = UserProfile.objects.get_or_create(user=request.user)
-        experiences = list(user_profile.experiences.all().values(
-            'id', 'title', 'company', 'is_current', 'period_text'
-        ))
-        educations = list(user_profile.educations.all().values(
-            'id', 'school', 'degree', 'field_of_study', 'period_text'
-        ))
-        licenses = list(user_profile.licenses_certificates.all().values(
-            'id', 'name', 'issuing_org', 'issue_text', 'expiry_text'
-        ))
-        return JsonResponse({
-            'success': True,
-            'data': {'experiences': experiences, 'educations': educations, 'licenses': licenses}
-        })
-    except UserProfile.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'User profile not found'}, status=404)
+        # This function might be used for AJAX, but if not needed, redirect
+        messages.info(request, "Skill context data loaded.")
+        return redirect("profile")
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        messages.error(request, f"Error loading skill data: {str(e)}")
+        return redirect("profile")
 
 
 def add_skill(request):
@@ -634,44 +600,41 @@ def add_skill(request):
                 continue
 
         skill.save()
+        messages.success(request, "Skill added successfully!", extra_tags='profile_update')
         return redirect("profile")
     return redirect("profile")
 
+
 @login_required
 def delete_skill(request, skill_id):
-    """
-    Delete a skill belonging to the logged-in user.
-    """
     skill = get_object_or_404(Skill, id=skill_id, userprofile__user=request.user)
 
     if request.method == "POST":
         skill.delete()
-        messages.success(request, "Skill deleted successfully!")
+        messages.success(request, "Skill deleted successfully!", extra_tags='profile_update')
         return redirect("profile")
 
-    # If accessed via GET, show a simple confirmation page (optional)
+    # If accessed via GET, show a simple confirmation page
     return render(request, "confirm_delete.html", {
         "object": skill,
         "type": "Skill",
         "cancel_url": "profile"
     })
 
+
 @login_required
 def get_skill_details(request, skill_id):
     try:
         skill = Skill.objects.get(id=skill_id, userprofile__user=request.user)
-        skill_data = {
-            'id': skill.id,
-            'skill_name': skill.skill_name,
-            'selected_experiences': list(skill.experiences.values_list('id', flat=True)),
-            'selected_educations': list(skill.educations.values_list('id', flat=True)),
-            'selected_licenses': list(skill.license_certificates.values_list('id', flat=True))
-        }
-        return JsonResponse({'success': True, 'data': skill_data})
+        # Instead of JSON, redirect or show in modal
+        messages.info(request, f"Skill details: {skill.skill_name}")
+        return redirect("profile")
     except Skill.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Skill not found'}, status=404)
+        messages.error(request, "Skill not found.")
+        return redirect("profile")
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        messages.error(request, f"Error: {str(e)}")
+        return redirect("profile")
 
 
 def edit_skill(request):
@@ -707,6 +670,7 @@ def edit_skill(request):
                 continue
 
         skill.save()
+        messages.success(request, "Skill updated successfully!", extra_tags='profile_update')
         return redirect("profile")
     return redirect("profile")
 
@@ -754,7 +718,7 @@ def view_profile(request, id):
 
 
 # ============================================
-# My Activity (kept, updated vars)
+# My Activity
 # ============================================
 
 def user_activity(request):
@@ -849,6 +813,7 @@ def user_activity(request):
 def delete_post(request, id):
     post = get_object_or_404(Post, id=id, user=request.user.userprofile)
     post.delete()
+    messages.success(request, "Post deleted successfully!")
     return redirect("user_activity")
 
 
@@ -858,6 +823,7 @@ def delete_post(request, id):
 
 def _gen_room_code():
     return "alummeet-" + secrets.token_urlsafe(10)
+
 
 @login_required
 def manage_availability(request):

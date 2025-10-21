@@ -197,60 +197,222 @@ def delete_post(request, id):
         return redirect("home")
     return render(request, "post_delete_confirm.html", {"post": post})
 
+
 @login_required
 def search_results(request):
     """
     Search people by:
       - name (default): full_name contains query
-      - university: university contains query  ← NEW
-    Accepts GET or POST. Prefers GET to allow shareable URLs.
+      - university: university contains query
     """
-    # read inputs (GET first so pagination/bookmarks work nicely)
+    # Read inputs
     search_input = request.GET.get("search_input") or request.POST.get("search_input") or ""
-    search_by    = (request.GET.get("search_by") or request.POST.get("search_by") or "name").lower()
+    search_by = (request.GET.get("search_by") or request.POST.get("search_by") or "name").lower()
 
-    # no query → empty state
+    # Handle POST actions (connection requests)
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        target_id = request.POST.get('target_id')
+
+        if action and target_id:
+            target_profile = get_object_or_404(UserProfile, id=target_id)
+            handle_connection_action(request, action, target_profile.user)
+            # Fix: Use proper URL construction
+            from django.urls import reverse
+            from urllib.parse import urlencode
+
+            params = urlencode({
+                'search_input': search_input,
+                'search_by': search_by
+            })
+            return redirect(reverse('search_results') + '?' + params)
+
+    # No query → empty state
     if not search_input.strip():
         return render(request, "search_results.html", {
             "search_results": [],
             "query": "",
             "search_by": search_by,
-            "request_receivers": [],
-            "request_senders": [],
-            "connections": [],
         })
 
-    # base queryset: exclude admin/staff
-    qs = UserProfile.objects.exclude(user__is_staff=True).exclude(user__is_superuser=True)
+    # Base queryset: exclude admin/staff and current user
+    qs = UserProfile.objects.exclude(user__is_staff=True).exclude(user__is_superuser=True).exclude(user=request.user)
 
-    # NEW: filter by university when requested
+    # Filter by search criteria
     if search_by == "university":
         results = qs.filter(university__icontains=search_input.strip())
     else:
-        # default: search by name (you can extend to headline/email as needed)
         results = qs.filter(full_name__icontains=search_input.strip())
 
-    # Build connection context so template can render proper buttons/states
-    received_requests = ConnectionRequest.objects.filter(receiver=request.user)
-    senders   = [req.sender for req in received_requests]        # users who sent me requests
-    sent_requests = ConnectionRequest.objects.filter(sender=request.user)
-    receivers = [req.receiver for req in sent_requests]          # users I sent requests to
-
-    connection_objs = Connection.objects.filter(Q(user1=request.user) | Q(user2=request.user))
-    connections = []
-    for c in connection_objs:
-        connections.append(c.user2 if c.user1 == request.user else c.user1)
+    # Add connection status to each profile
+    for profile in results:
+        profile.connection_status = get_connection_status(request.user, profile.user)
 
     context = {
         "search_results": results,
         "query": search_input,
         "search_by": search_by,
-        "request_receivers": receivers,
-        "request_senders": senders,
-        "connections": connections,
     }
     return render(request, "search_results.html", context)
 
+
+def get_connection_status(current_user, target_user):
+    """Determine connection status between current user and target user"""
+    # Check if already connected
+    if Connection.objects.filter(
+            Q(user1=current_user, user2=target_user) |
+            Q(user1=target_user, user2=current_user)
+    ).exists():
+        return 'connected'
+
+    # Check if request sent by current user
+    if ConnectionRequest.objects.filter(
+            sender=current_user, receiver=target_user
+    ).exists():
+        return 'request_sent'
+
+    # Check if request received from target user
+    if ConnectionRequest.objects.filter(
+            sender=target_user, receiver=current_user
+    ).exists():
+        return 'request_received'
+
+    return 'none'
+
+
+def handle_connection_action(request, action, target_user):
+    """Handle connection actions (create, accept, cancel, remove, ignore)"""
+    target_profile = UserProfile.objects.get(user=target_user)
+    target_name = target_profile.full_name
+
+    if action == 'create':
+        # Check if connection request already exists
+        existing_request = ConnectionRequest.objects.filter(
+            sender=request.user,
+            receiver=target_user
+        ).first()
+
+        if existing_request:
+            messages.info(request, f"Connection request already sent to {target_name}.")
+            return
+
+        # Check if they are already connected
+        existing_connection = Connection.objects.filter(
+            Q(user1=request.user, user2=target_user) |
+            Q(user1=target_user, user2=request.user)
+        ).first()
+
+        if existing_connection:
+            messages.info(request, f"You are already connected with {target_name}.")
+            return
+
+        # Check if there's a pending request from the target user
+        pending_request = ConnectionRequest.objects.filter(
+            sender=target_user,
+            receiver=request.user
+        ).first()
+
+        if pending_request:
+            messages.info(request,
+                          f"{target_name} has already sent you a connection request. Please check your pending requests.")
+            return
+
+        # Only create if no existing request or connection
+        ConnectionRequest.objects.create(sender=request.user, receiver=target_user)
+        messages.success(request, f"Connection request sent to {target_name}!")
+
+        # 🔔 Notify the receiver
+        from django.urls import reverse
+        from notifications.utils import notify
+
+        profile_name = getattr(request.user.userprofile, 'full_name', request.user.username)
+        profile_id = getattr(request.user.userprofile, 'id', None)
+
+        message = f"{profile_name} sent you a connection request"
+        url = reverse('view_profile', args=[profile_id]) if profile_id else reverse('home')
+
+        notify(
+            target_user,
+            'connection',
+            message,
+            url=url
+        )
+
+    elif action == 'accept':
+        # Accept connection request
+        connection_request = ConnectionRequest.objects.filter(
+            sender=target_user,
+            receiver=request.user
+        ).first()
+
+        if not connection_request:
+            messages.error(request, f"No connection request found from {target_name}.")
+            return
+
+        # Check if already connected
+        existing_connection = Connection.objects.filter(
+            Q(user1=request.user, user2=target_user) |
+            Q(user1=target_user, user2=request.user)
+        ).first()
+
+        if existing_connection:
+            messages.info(request, f"You are already connected with {target_name}.")
+            connection_request.delete()  # Clean up the request
+            return
+
+        Connection.objects.create(user1=request.user, user2=target_user)
+        connection_request.delete()
+        messages.success(request, f"You are now connected with {target_name}!")
+
+        # 🔔 Notify sender
+        from django.urls import reverse
+        from notifications.utils import notify
+
+        notify(
+            target_user,
+            'connection',
+            f'{request.user.userprofile.full_name} accepted your connection request',
+            url=reverse('view_profile', args=[request.user.userprofile.id])
+        )
+
+    elif action == 'cancel':
+        # Cancel sent request
+        connection_request = ConnectionRequest.objects.filter(
+            sender=request.user,
+            receiver=target_user
+        ).first()
+
+        if connection_request:
+            connection_request.delete()
+            messages.info(request, f"Connection request to {target_name} cancelled.")
+        else:
+            messages.warning(request, f"No connection request found to {target_name}.")
+
+    elif action == 'remove':
+        # Remove existing connection
+        connection = Connection.objects.filter(
+            Q(user1=request.user, user2=target_user) |
+            Q(user1=target_user, user2=request.user)
+        ).first()
+
+        if connection:
+            connection.delete()
+            messages.info(request, f"Connection with {target_name} removed.")
+        else:
+            messages.warning(request, f"No connection found with {target_name}.")
+
+    elif action == 'ignore':
+        # Ignore received request
+        connection_request = ConnectionRequest.objects.filter(
+            sender=target_user,
+            receiver=request.user
+        ).first()
+
+        if connection_request:
+            connection_request.delete()
+            messages.info(request, f"Connection request from {target_name} ignored.")
+        else:
+            messages.warning(request, f"No connection request found from {target_name}.")
 
 @login_required
 def send_connection_request(request, user_id):
@@ -263,36 +425,8 @@ def send_connection_request(request, user_id):
         messages.error(request, "You cannot send a connection request to yourself.")
         return redirect('my_connections')
 
-    existing = ConnectionRequest.objects.filter(
-        Q(sender=sender, receiver=receiver) | Q(sender=receiver, receiver=sender)
-    )
-    if existing.exists():
-        messages.info(request, "A connection request already exists.")
-        return redirect('my_connections')
-
-    ConnectionRequest.objects.create(sender=sender, receiver=receiver)
-    messages.success(request, f"Connection request sent to {receiver_profile.full_name}.")
-
-    # 🔔 Notify the receiver
-    from django.urls import reverse
-    from notifications.utils import notify
-
-    # 🔔 Notify the receiver of connection request
-    target_user = getattr(receiver, 'user', receiver)  # ensures it's the actual User instance
-    profile_id = getattr(sender.userprofile, 'id', None)
-    profile_name = getattr(sender.userprofile, 'full_name', sender.username)
-
-    message = f"{profile_name} sent you a connection request"
-
-    url = reverse('view_profile', args=[profile_id]) if profile_id else reverse('home')
-
-    notify(
-        target_user,
-        'connection',
-        message,
-        url=url
-    )
-
+    # Use the unified handler
+    handle_connection_action(request, 'create', receiver)
     return redirect('my_connections')
 
 
@@ -300,25 +434,11 @@ def send_connection_request(request, user_id):
 def accept_connection_request(request, user_id):
     """Accept a connection request and create a Connection."""
     receiver = request.user
-    sender = get_object_or_404(UserProfile, id=user_id).user
+    sender_profile = get_object_or_404(UserProfile, id=user_id)
+    sender = sender_profile.user
 
-    try:
-        conn_req = ConnectionRequest.objects.get(sender=sender, receiver=receiver)
-        Connection.objects.get_or_create(user1=sender, user2=receiver)
-        conn_req.delete()
-        messages.success(request, "Connection request accepted.")
-
-        # 🔔 Notify sender
-        notify(
-            sender,
-            'connection',
-            f'{receiver.userprofile.full_name} accepted your connection request',
-            url=reverse('view_profile', args=[receiver.userprofile.id])
-        )
-
-    except ConnectionRequest.DoesNotExist:
-        messages.error(request, "No such connection request found.")
-
+    # Use the unified handler
+    handle_connection_action(request, 'accept', sender)
     return redirect('my_connections')
 
 
@@ -326,16 +446,26 @@ def accept_connection_request(request, user_id):
 def delete_connection_request(request, user_id):
     """Delete (cancel or ignore) an existing connection request."""
     me = request.user
-    other_user = get_object_or_404(UserProfile, id=user_id).user
+    other_profile = get_object_or_404(UserProfile, id=user_id)
+    other_user = other_profile.user
 
-    deleted_count, _ = ConnectionRequest.objects.filter(
-        Q(sender=me, receiver=other_user) | Q(sender=other_user, receiver=me)
-    ).delete()
-
-    if deleted_count:
-        messages.info(request, "Connection request deleted.")
+    # Determine whether to use 'cancel' or 'ignore'
+    if ConnectionRequest.objects.filter(sender=me, receiver=other_user).exists():
+        handle_connection_action(request, 'cancel', other_user)
     else:
-        messages.warning(request, "No connection request found.")
+        handle_connection_action(request, 'ignore', other_user)
+
+    return redirect('my_connections')
+
+@login_required
+def remove_connection(request, user_id):
+    """Remove an existing connection."""
+    me = request.user
+    other_profile = get_object_or_404(UserProfile, id=user_id)
+    other_user = other_profile.user
+
+    # Use the unified handler
+    handle_connection_action(request, 'remove', other_user)
     return redirect('my_connections')
 
 
@@ -368,6 +498,10 @@ def my_connections(request):
         .exclude(user__is_superuser=True)
         .exclude(id__in=exclude_ids)[:20]
     )
+
+    # Add connection status for suggested users
+    for profile in suggested_users:
+        profile.connection_status = get_connection_status(request.user, profile.user)
 
     context = {
         "user_profile": user_profile,

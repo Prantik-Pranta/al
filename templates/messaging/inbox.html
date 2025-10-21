@@ -5,13 +5,47 @@
 
 {% block extra_css %}
 <style>
-  .chat-card { border: 1px solid var(--border); border-radius: 12px; }
-  .chat-item { display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid var(--border); text-decoration:none; color:inherit; }
-  .chat-item:last-child { border-bottom:0; }
-  .chat-item:hover { background: var(--bg); }
-  .chat-avatar { width:44px; height:44px; border-radius:50%; object-fit:cover; border:2px solid #eee; }
-  .chat-name { font-weight:600; margin:0; }
-  .chat-preview { font-size:12px; color:#666; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:360px; }
+  .chat-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+  }
+  .chat-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    text-decoration: none;
+    color: inherit;
+    transition: var(--transition);
+  }
+  .chat-item:last-child { border-bottom: 0; }
+  .chat-item:hover {
+    background: var(--bg);
+    text-decoration: none;
+  }
+  .chat-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--border);
+  }
+  .chat-name {
+    font-weight: 600;
+    margin: 0;
+    color: var(--text);
+  }
+  .chat-preview {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 400px;
+  }
 </style>
 {% endblock %}
 
@@ -19,9 +53,11 @@
 <div class="container py-4">
   <div class="row">
     <div class="col-12 col-lg-8 mx-auto">
-      <div class="d-flex align-items-center justify-content-between mb-3">
-        <h4 class="mb-0">Messages</h4>
-        <a href="{% url 'home' %}" class="btn btn-outline-secondary btn-sm">Back to Home</a>
+      <div class="d-flex align-items-center justify-content-between mb-4">
+        <h4 class="fw-bold mb-0">Messages</h4>
+        <a href="{% url 'home' %}" class="btn btn-outline-secondary btn-sm">
+          <i class="fa-solid fa-arrow-left me-1"></i>Back to Home
+        </a>
       </div>
 
       <div class="card chat-card">
@@ -50,10 +86,10 @@
             {% endwith %}
           {% endfor %}
         {% else %}
-          <div class="p-5 text-center text-muted">
-            <i class="fa-regular fa-comments fa-2x mb-3"></i>
-            <p class="mb-1">No conversations yet.</p>
-            <small>Connect with people to start chatting.</small>
+          <div class="text-center text-muted p-5">
+            <i class="fa-regular fa-comments fa-3x mb-3"></i>
+            <p class="mb-1 fw-semibold">No conversations yet</p>
+            <small>Connect with people to start chatting</small>
           </div>
         {% endif %}
       </div>

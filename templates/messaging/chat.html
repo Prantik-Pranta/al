@@ -5,17 +5,71 @@
 
 {% block extra_css %}
 <style>
-  .chat-wrapper { border:1px solid var(--border); border-radius:12px; overflow:hidden; }
-  .chat-header { background:#fafafa; border-bottom:1px solid var(--border); padding:12px 16px; display:flex; align-items:center; gap:12px; justify-content:space-between; }
-  .chat-header-left { display:flex; align-items:center; gap:12px; }
-  .chat-actions { display:flex; align-items:center; gap:8px; }
-  .chat-avatar { width:40px; height:40px; border-radius:50%; object-fit:cover; border:2px solid #eee; }
-  .chat-body { height:55vh; overflow-y:auto; padding:16px; background:#fff; }
-  .bubble { max-width:70%; margin-bottom:10px; padding:10px 12px; border-radius:14px; line-height:1.35; }
-  .me { margin-left:auto; background:#e7f1ff; border:1px solid #cfe3ff; }
-  .them { margin-right:auto; background:#f4f5f7; border:1px solid #e9eaee; }
-  .chat-time { font-size:11px; color:#888; margin-top:2px; }
-  .chat-input { border-top:1px solid var(--border); background:#fafafa; padding:10px; }
+  .chat-wrapper {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--surface);
+  }
+  .chat-header {
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    justify-content: space-between;
+  }
+  .chat-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .chat-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .chat-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--border);
+  }
+  .chat-body {
+    height: 60vh;
+    overflow-y: auto;
+    padding: 20px;
+    background: var(--surface);
+  }
+  .bubble {
+    max-width: 70%;
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    border-radius: 18px;
+    line-height: 1.4;
+  }
+  .me {
+    margin-left: auto;
+    background: var(--primary-light);
+    border: 1px solid var(--primary);
+  }
+  .them {
+    margin-right: auto;
+    background: var(--bg);
+    border: 1px solid var(--border);
+  }
+  .chat-time {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+  .chat-input {
+    border-top: 1px solid var(--border);
+    background: var(--bg);
+    padding: 16px;
+  }
 </style>
 {% endblock %}
 
@@ -79,7 +133,8 @@
             {% endif %}
           {% empty %}
             <div class="text-center text-muted py-5">
-              Say hello to start the conversation 👋
+              <i class="fa-regular fa-comments fa-2x mb-3"></i>
+              <p class="mb-0">Say hello to start the conversation 👋</p>
             </div>
           {% endfor %}
         </div>
