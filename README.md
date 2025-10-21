@@ -42,3 +42,38 @@ python manage.py runserver
 
 
 ```
+git push rules:
+
+for **First time**
+
+git init
+
+git add .
+
+git commit -m "your commited msg here"
+
+git branch -M main
+
+git remote add origin [repo link]
+
+if say error: remote origin already exists. Then:
+
+git remote set-url origin [repo link]
+
+git push -u origin main
+
+To push in a existing repo just
+
+git add .
+
+git commit -m "your commited msg here"
+
+git remote add origin [repo link]
+
+if say error: remote origin already exists. Then:
+
+git remote set-url origin [repo link]
+
+git push -u origin main
+
+```
