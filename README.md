@@ -13,12 +13,15 @@ cd alumnify
 ### 2 Create and Activate Virtual Environment
 ```
 python -m venv venv
-
+```
 # Activate virtual environment
 
 # On Linux/Mac
+```
 source venv/bin/activate
+```
 # On Windows
+```
 venv\Scripts\activate
 ```
 
@@ -31,6 +34,8 @@ pip install -r requirements.txt
 ### 4 Apply Migrations
 ```
 python manage.py makemigrations
+```
+```
 python manage.py migrate
 ```
 
