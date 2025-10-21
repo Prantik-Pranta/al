@@ -1,455 +1,105 @@
+{% extends "base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Search Results - AlumniFy</title>
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-    />
-    <link rel="stylesheet" href="{% static 'css/header.css' %}" />
-    <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
 
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-          Oxygen, Ubuntu, Cantarell, sans-serif;
-        background-color: #f3f2ef;
-        color: rgba(0, 0, 0, 0.9);
-        line-height: 1.4;
-      }
+{% block title %}Search Results{% endblock %}
 
-      /* ===== HEADER ===== */
-      .header {
-        background: #fff;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-        position: sticky;
-        top: 0;
-        z-index: 100;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-      }
+{% block content %}
+<div class="container py-4">
+    <h3 class="mb-3">Search</h3>
 
-      .header-content {
-        max-width: 1128px;
-        margin: 0 auto;
-        padding: 8px 16px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-      }
-
-      .logo {
-        color: #0a66c2;
-        font-size: 26px;
-        font-weight: 700;
-        text-decoration: none;
-      }
-
-      .search-box {
-        position: relative;
-        flex: 1;
-        max-width: 280px;
-        margin: 0 20px;
-      }
-
-      .search-input {
-        width: 100%;
-        height: 34px;
-        padding: 0 8px 0 36px;
-        background: #eef3f8;
-        border: none;
-        border-radius: 4px;
-        font-size: 14px;
-        color: rgba(0, 0, 0, 0.9);
-      }
-
-      .search-icon {
-        position: absolute;
-        left: 10px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: rgba(0, 0, 0, 0.6);
-        font-size: 14px;
-      }
-
-      /* ===== NAV MENU ===== */
-      .nav-menu {
-        display: flex;
-        align-items: center;
-        gap: 28px;
-        list-style: none;
-      }
-
-      .nav-item {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        text-decoration: none;
-        color: rgba(0, 0, 0, 0.6);
-        font-size: 12px;
-        position: relative;
-        transition: color 0.2s ease;
-      }
-
-      .nav-item:hover {
-        color: rgba(0, 0, 0, 0.9);
-      }
-
-      .nav-item.active {
-        color: rgba(0, 0, 0, 0.9);
-      }
-
-      .nav-item.active::after {
-        content: "";
-        position: absolute;
-        bottom: -6px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 100%;
-        height: 2px;
-        background: #000;
-      }
-
-      .nav-icon {
-        font-size: 20px;
-        margin-bottom: 4px;
-      }
-
-      /* ===== DROPDOWN ===== */
-      .profile-dropdown {
-        position: relative;
-      }
-      .nav-item-profile {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        font-size: 12px;
-        color: rgba(0, 0, 0, 0.6);
-      }
-
-      .dropdown-menu {
-        display: none;
-        position: absolute;
-        right: 0;
-        top: 40px;
-        background: #fff;
-        border: 1px solid rgba(0, 0, 0, 0.08);
-        border-radius: 8px;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
-        width: 220px;
-        padding: 15px;
-        z-index: 100;
-      }
-
-      .dropdown-menu .profile-preview {
-        text-align: center;
-        margin-bottom: 10px;
-      }
-
-      .view-profile-btn {
-        display: block;
-        text-align: center;
-        background: #fff;
-        color: #0a66c2;
-        border: 1px solid #0a66c2;
-        border-radius: 15px;
-        padding: 6px 0;
-        font-size: 14px;
-        font-weight: 500;
-        text-decoration: none;
-      }
-
-      .view-profile-btn:hover {
-        background: #cbdbe9;
-        color: #0a66c2;
-      }
-
-      .signout-btn {
-        width: 100%;
-        background: none;
-        border: none;
-        padding: 10px;
-        text-align: center;
-        cursor: pointer;
-        font-size: 14px;
-        color: rgba(0, 0, 0, 0.7);
-      }
-
-      .signout-btn:hover {
-        background-color: rgba(0, 0, 0, 0.05);
-      }
-
-      /* ===== CONTENT ===== */
-      .container {
-        max-width: 1128px;
-        margin: 24px auto;
-        padding: 0 24px;
-      }
-
-      .main-content {
-        background: #fff;
-        border: 1px solid rgba(0, 0, 0, 0.08);
-        border-radius: 8px;
-        overflow: hidden;
-      }
-
-      .profile-card {
-        padding: 16px;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-        display: flex;
-        gap: 12px;
-        transition: background 0.15s ease;
-      }
-
-      .profile-card:hover {
-        background-color: rgba(0, 0, 0, 0.02);
-      }
-
-      .profile-avatar img {
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        object-fit: cover;
-      }
-
-      .profile-info {
-        margin-bottom: 8px;
-      }
-      .profile-name {
-        font-size: 16px;
-        font-weight: 600;
-        color: rgba(0, 0, 0, 0.9);
-      }
-      .profile-headline {
-        font-size: 14px;
-        color: rgba(0, 0, 0, 0.8);
-      }
-      .profile-location {
-        font-size: 12px;
-        color: rgba(0, 0, 0, 0.6);
-      }
-
-      .btn {
-        padding: 6px 16px;
-        border-radius: 16px;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-        border: 1px solid;
-        transition: all 0.2s;
-      }
-
-      .btn-connect {
-        background: transparent;
-        color: #0a66c2;
-        border-color: #0a66c2;
-      }
-      .btn-connect:hover {
-        background: rgba(112, 181, 249, 0.15);
-      }
-
-      .btn-pending {
-        background: transparent;
-        color: rgba(0, 0, 0, 0.6);
-        border-color: rgba(0, 0, 0, 0.6);
-      }
-      .btn-pending:hover {
-        background: rgba(0, 0, 0, 0.08);
-      }
-
-      .btn-accept {
-        background: #0a66c2;
-        color: white;
-        border-color: #0a66c2;
-      }
-      .btn-accept:hover {
-        background: #004182;
-      }
-
-      .btn-ignore {
-        background: transparent;
-        color: rgba(0, 0, 0, 0.6);
-        border-color: rgba(0, 0, 0, 0.6);
-      }
-      .btn-ignore:hover {
-        background: rgba(0, 0, 0, 0.08);
-      }
-
-      .empty-state {
-        text-align: center;
-        padding: 60px 20px;
-      }
-
-      .empty-state-icon {
-        font-size: 64px;
-        color: rgba(0, 0, 0, 0.25);
-        margin-bottom: 16px;
-      }
-    </style>
-  </head>
-
-  <body>
-    <!-- ===== HEADER ===== -->
-    <header class="header">
-      <div class="header-content">
-        <a href="{% url 'home' %}" class="logo">AlumniFy</a>
-
-        <div class="search-box">
-          <form method="POST" action="{% url 'search_results' %}">
-            {% csrf_token %}
-            <span class="search-icon">
-              <button
-                type="submit"
-                style="background: none; border: none; cursor: pointer"
-              >
-                <i class="fa-solid fa-search"></i>
-              </button>
-            </span>
-            <input
-              type="text"
-              class="search-input"
-              name="search_input"
-              placeholder="Search"
-            />
-          </form>
+    <!-- Search form (GET so results are shareable/bookmarkable) -->
+    <form class="row g-2 align-items-end mb-4" action="{% url 'search_results' %}" method="get">
+        <div class="col-md-6">
+            <label class="form-label">Search query</label>
+            <input type="text" name="search_input" class="form-control" value="{{ query|default:'' }}"
+                   placeholder="e.g., John or University of Dhaka">
         </div>
+        <<div class="col-md-4">
+  <label class="form-label">Search by</label>
+  <select name="search_by" class="form-select">
+    <option value="name" {% if search_by == 'name' %}selected{% endif %}>Name</option>
+    <option value="university" {% if search_by == 'university' %}selected{% endif %}>University</option>
+  </select>
+</div>
 
-        <nav class="nav-menu">
-          <a href="{% url 'home' %}" class="nav-item">
-            <span class="nav-icon"><i class="fa-solid fa-home"></i></span
-            ><span>Home</span>
-          </a>
-          <a href="{% url 'my_connections' %}" class="nav-item">
-            <span class="nav-icon"><i class="fa-solid fa-users"></i></span
-            ><span>My Network</span>
-          </a>
-          <a href="{% url 'user_activity' %}" class="nav-item">
-            <span class="nav-icon"><i class="fa-solid fa-list-check"></i></span
-            ><span>My Activity</span>
-          </a>
-          <a href="{% url 'inbox' %}" class="nav-item">
-            <span class="nav-icon"
-              ><i class="fa-solid fa-comment-dots"></i></span
-            ><span>Messaging</span>
-          </a>
-          <a href="{% url 'notifications' %}" class="nav-item">
-            <span class="nav-icon"><i class="fa-solid fa-bell"></i></span
-            ><span>Notifications</span>
-          </a>
-
-          <div class="nav-item profile-dropdown">
-            <a
-              href="#"
-              class="nav-item-profile"
-              onclick="toggleProfileMenu(event)"
-            >
-              <span class="nav-icon">
-                <img
-                  src="{% if user_profile.profile_photo %}{{ user_profile.profile_photo.url }}{% else %}{% static 'images/default-profile.png' %}{% endif %}"
-                  onerror="this.onerror=null;this.src='{% static 'images/default-profile.png' %}';"
-                  alt="Profile Picture"
-                  style="
-                    width: 24px;
-                    height: 24px;
-                    border-radius: 50%;
-                    object-fit: cover;
-                  "
-                />
-              </span>
-              <span>Me ▼</span>
-            </a>
-
-            <div id="profileMenu" class="dropdown-menu">
-              <div class="profile-preview">
-                <img
-                  src="{% if user_profile.profile_photo %}{{ user_profile.profile_photo.url }}{% else %}{% static 'images/default-profile.png' %}{% endif %}"
-                  onerror="this.onerror=null;this.src='{% static 'images/default-profile.png' %}';"
-                  alt="Profile Picture"
-                  style="
-                    width: 60px;
-                    height: 60px;
-                    border-radius: 50%;
-                    object-fit: cover;
-                    margin-bottom: 10px;
-                  "
-                />
-                <h4>{{ user_profile.full_name }}</h4>
-                {% if user_profile.headline %}
-                <p>{{ user_profile.headline }}</p>
-                {% endif %}
-              </div>
-              <a href="{% url 'profile' %}" class="view-profile-btn"
-                >View Profile</a
-              >
-              <form method="POST" action="{% url 'logout' %}">
-                {% csrf_token %}
-                <button type="submit" class="signout-btn">Sign Out</button>
-              </form>
-            </div>
-          </div>
-        </nav>
-      </div>
-    </header>
-
-    <!-- ===== CONTENT ===== -->
-    <div class="container">
-      <main class="main-content">
-        {% if search_results %} {% for profile in search_results %}
-        <a
-          href="{% url 'view_profile' profile.id %}"
-          style="text-decoration: none; color: inherit"
-        >
-          <div class="profile-card">
-            <div class="profile-avatar">
-              <img
-                src="{% if profile.profile_photo %}{{ profile.profile_photo.url }}{% else %}{% static 'images/default-profile.png' %}{% endif %}"
-                onerror="this.onerror=null;this.src='{% static 'images/default-profile.png' %}';"
-                alt="Profile Picture"
-              />
-            </div>
-            <div class="profile-content">
-              <div class="profile-info">
-                <div class="profile-name">{{ profile.full_name }}</div>
-                {% if profile.headline %}
-                <div class="profile-headline">{{ profile.headline }}</div>
-                {% endif %} {% if profile.location %}
-                <div class="profile-location">{{ profile.location }}</div>
-                {% endif %}
-              </div>
-            </div>
-          </div>
-        </a>
-        {% endfor %} {% else %}
-        <div class="empty-state">
-          <div class="empty-state-icon"><i class="fa-solid fa-search"></i></div>
-          <h2>No Results Found</h2>
-          <p>Try searching for different people or keywords.</p>
+        <div class="col-md-2">
+            <button class="btn btn-primary w-100">Search</button>
         </div>
-        {% endif %}
-      </main>
+    </form>
+
+    {% if query %}
+    <p class="text-muted mb-3">
+        Showing results for <strong>{{ query }}</strong> by <strong>{{ search_by }}</strong>.
+        <span class="ms-2 badge bg-secondary">{{ search_results|length }}</span>
+    </p>
+    {% endif %}
+
+    {% if search_results %}
+    <div class="list-group">
+        {% for profile in search_results %}
+        <div class="list-group-item py-3">
+            <div class="d-flex align-items-center">
+                <a href="{% url 'view_profile' profile.id %}">
+                    <img src="{% if profile.profile_photo %}{{ profile.profile_photo.url }}{% else %}{% static 'images/default-profile.png' %}{% endif %}"
+                         class="rounded-circle me-3" width="56" height="56" alt="{{ profile.full_name }}">
+                </a>
+                <div class="flex-grow-1">
+                    <a href="{% url 'view_profile' profile.id %}" class="text-decoration-none">
+                        <h6 class="mb-1">{{ profile.full_name }}</h6>
+                    </a>
+                    {% if profile.headline %}
+                    <div class="text-muted small">{{ profile.headline }}</div>
+                    {% endif %}
+                    {% if profile.university %}
+                    <div class="small"><i class="fa-solid fa-building-columns me-1"></i> {{ profile.university }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Actions: Connected / Accept+Ignore / Requested / Connect -->
+                {# Connect #}
+                <form action="{% url 'search_results' %}" method="post" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="create">
+                    <input type="hidden" name="target_id" value="{{ profile.id }}">
+                    <button class="btn btn-primary btn-sm">Connect</button>
+                </form>
+
+                {# Accept #}
+                <form action="{% url 'search_results' %}" method="post" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="accept">
+                    <input type="hidden" name="target_id" value="{{ profile.id }}">
+                    <button class="btn btn-success btn-sm">Accept</button>
+                </form>
+
+                {# Cancel/Ignore (pending request) #}
+                <form action="{% url 'search_results' %}" method="post" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="cancel">
+                    <input type="hidden" name="target_id" value="{{ profile.id }}">
+                    <button class="btn btn-outline-secondary btn-sm">Cancel</button>
+                </form>
+
+                {# Remove existing connection #}
+                <form action="{% url 'search_results' %}" method="post" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="remove">
+                    <input type="hidden" name="target_id" value="{{ profile.id }}">
+                    <button class="btn btn-outline-danger btn-sm">Remove</button>
+                </form>
+
+
+            </div>
+        </div>
+        {% endfor %}
     </div>
-
-    <script>
-      function toggleProfileMenu(event) {
-        event.preventDefault();
-        let menu = document.getElementById("profileMenu");
-        menu.style.display = menu.style.display === "block" ? "none" : "block";
-      }
-
-      document.addEventListener("click", function (event) {
-        let menu = document.getElementById("profileMenu");
-        let button = document.querySelector(".profile-dropdown");
-        if (!button.contains(event.target)) {
-          menu.style.display = "none";
-        }
-      });
-    </script>
-  </body>
-</html>
+    {% else %}
+    {% if query %}
+    <div class="text-center text-muted py-5">
+        <i class="fa-solid fa-user-group fa-2x mb-3"></i>
+        <p class="mb-0">No results found for this {{ search_by }}.</p>
+    </div>
+    {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

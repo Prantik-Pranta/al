@@ -1,15 +1,25 @@
 from django.db import models
 from User.models import UserProfile
 
+
+# feed/models.py (or wherever Post lives)
+
+from django.db import models
+from User.models import UserProfile
+
 class Post(models.Model):
-    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='posts')
-    content = models.TextField()
-    image = models.ImageField(upload_to='post_images/', blank=True, null=True)
+    user = models.ForeignKey(UserProfile, related_name="posts", on_delete=models.CASCADE)
+    content = models.TextField(blank=True)
+    image = models.ImageField(upload_to="posts/", blank=True, null=True)  # supports GIFs too
+    shared_post = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL, related_name="shares")
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+
+    # NEW: which university is allowed to see this post
+    audience_university = models.CharField(max_length=255, blank=True, db_index=True)
 
     def __str__(self):
-        return f"Post by {self.user.full_name} ({self.id})"
+        return f"{self.user.full_name}: {self.content[:30]}"
+
 
 class Comment(models.Model):
     user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='comments')

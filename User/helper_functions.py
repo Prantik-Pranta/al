@@ -1,6 +1,12 @@
 from feed.models import Post, Like, Comment
 from User.models import ConnectionRequest, Connection, UserProfile
-from django.db.models import Q  
+from django.db.models import Q
+
+# User/helper_functions.py
+from django.db.models import Q
+from feed.models import Post
+from User.models import Connection
+
 
 def find_connection_userprofiles(user):
     connections = Connection.objects.filter(
@@ -13,9 +19,38 @@ def find_connection_userprofiles(user):
             connected_users.append(connection.user1)
     return connected_users
 
+
+
 def find_connection_posts(user):
-    connected_users = find_connection_userprofiles(user)
-    posts = Post.objects.filter(user__user__in=connected_users).order_by('-created_at')
+    # Get user's connections
+    connections = Connection.objects.filter(
+        Q(user1=user) | Q(user2=user)
+    )
+
+    # Get connected users (exclude admin users)
+    connected_users = []
+    for connection in connections:
+        if connection.user1 == user:
+            # Check if user2 is not admin
+            if not connection.user2.is_staff and not connection.user2.is_superuser:
+                connected_users.append(connection.user2)
+        else:
+            # Check if user1 is not admin
+            if not connection.user1.is_staff and not connection.user1.is_superuser:
+                connected_users.append(connection.user1)
+
+    # Get user profiles of connected users
+    from User.models import UserProfile
+    connected_user_profiles = UserProfile.objects.filter(user__in=connected_users)
+
+    # Get current user's profile
+    current_user_profile = UserProfile.objects.get(user=user)
+
+    # Get posts from current user AND their connections (exclude admin posts)
+    posts = Post.objects.filter(
+        Q(user=current_user_profile) | Q(user__in=connected_user_profiles)
+    ).select_related('user').order_by('-created_at')
+
     return posts
 
 def find_liked_posts(user):
