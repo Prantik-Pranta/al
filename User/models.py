@@ -17,7 +17,7 @@ class UserProfile(models.Model):
     headline = models.CharField(max_length=255, blank=True, null=True)
     location = models.CharField(max_length=255, blank=True, null=True)
     summary = models.TextField(blank=True, null=True)
-    profile_photo = models.ImageField(upload_to='profile_photos/', default='profile_photos/default-profile.png')
+    profile_photo = models.ImageField(upload_to='profile_photos/', default='profile_photos/defaultpp.png')
     phone = models.CharField(max_length=15, unique=True, default=None)
     university = models.CharField(max_length=255, blank=True, null=True)
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES, blank=True, default="")

@@ -63,9 +63,10 @@
                     <small class="text-muted">
                       Duration: {{ slot.duration }}
                     </small>
-                    <a href="{% url 'book_slot' slot.id %}" class="btn btn-primary btn-sm">
-                      <i class="fa-solid fa-calendar-check me-1"></i>Book
-                    </a>
+                    <a href="{% url 'availability_book' slot.id %}" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-calendar-check me-1"></i>Book
+                      </a>
+
                   </div>
                 </div>
               </div>

@@ -400,3 +400,35 @@ body {
     background-color: #d1ecf1;
     color: #0c5460;
 }
+{% block extra_css %}
+<style>
+  /* --- BACKGROUND BLUR EFFECT --- */
+  body {
+    background: url("{% static 'images/bg-blur.jpg' %}") center/cover no-repeat fixed;
+    /* optional fallback color */
+    background-color: #f0f2f5;
+    position: relative;
+  }
+
+  /* Blur overlay for readability */
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    backdrop-filter: blur(12px); /* main blur effect */
+    -webkit-backdrop-filter: blur(12px);
+    background-color: rgba(255, 255, 255, 0.4); /* light transparent overlay */
+    z-index: -1; /* stays behind content */
+  }
+
+  /* Optional: make cards slightly transparent for soft look */
+  .card, .navbar, .modal-content {
+    background-color: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+</style>
+{% endblock %}

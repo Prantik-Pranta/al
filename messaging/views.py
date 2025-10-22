@@ -120,14 +120,10 @@ def chat_start_meeting(request, user_id):
 
 @login_required
 def meeting_room(request, room_code):
-    """
-    Render a Jitsi meeting room. Uses your existing meeting_room.html template.
-    """
-    context = {
+    return render(request, "messaging/meeting_room.html", {
         "room_code": room_code,
-        "jitsi_domain": "meet.jit.si",  # change if you self-host Jitsi
-    }
-    return redirect(reverse("meeting_room", kwargs={"room_code": room_code}))
+        "jitsi_domain": "meet.jit.si",
+    })
 
 
 from django.shortcuts import render, redirect, get_object_or_404

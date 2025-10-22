@@ -69,7 +69,7 @@
             </div>
           </div>
 
-          <p>{{ post.content }}</p>
+          <p>{{ post.content|urlize|linebreaksbr }}</p>
           {% if post.image %}
           <img src="{{ post.image.url }}" class="img-fluid rounded mb-2" alt="Post media">
           {% endif %}
